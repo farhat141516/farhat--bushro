@@ -1,36 +1,6 @@
 const form = document.querySelector('#application-form');
 const status = document.querySelector('#form-status');
-const requiredFields = [...form.querySelectorAll('[required]')];
-const photoGallery = document.querySelector('#madrasa-gallery');
-const photoSlot = document.querySelector('.madrasa-photo-slot');
-
-fetch('/api/content').then((response) => response.json()).then((content) => {
-  Object.entries(content.icons || {}).forEach(([name, value]) => {
-    document.querySelector(`[data-icon="${name}"]`)?.replaceChildren(document.createTextNode(value));
-  });
-  if (photoGallery) renderPhotos(content.photos || []);
-  const homeTeachers = document.querySelector('#public-home-teachers');
-  if (homeTeachers) {
-    const teachers = [...(content.teachers?.hafiz || []), ...(content.teachers?.alim || [])].slice(0, 3);
-    homeTeachers.replaceChildren(...teachers.map((teacher) => {
-      const article = document.createElement('article'); article.className = 'teacher-card'; article.innerHTML = `<span class="teacher-icon" aria-hidden="true">♙</span><div><h3></h3><p></p></div>`;
-      article.querySelector('h3').textContent = teacher.name; article.querySelector('p').textContent = teacher.subject; return article;
-    }));
-  }
-}).catch(() => { if (photoGallery) renderPhotos([]); });
-
-function renderPhotos(photos) {
-  photoGallery.replaceChildren();
-  photos.forEach((source, index) => {
-    const image = document.createElement('img');
-    image.src = source;
-    image.alt = `Фотография медресе ${index + 1}`;
-    photoGallery.append(image);
-  });
-  photoSlot.classList.toggle('image-unavailable', photos.length === 0);
-}
-
-if (photoGallery) fetch('/api/content').then((response) => response.json()).then((content) => renderPhotos(content.photos || [])).catch(() => renderPhotos([]));
+const requiredFields = form ? [...form.querySelectorAll('[required]')] : [];
 
 const messages = {
   studentName: 'Укажите ФИО ученика.',
@@ -58,7 +28,7 @@ requiredFields.forEach((field) => {
   field.addEventListener('change', () => validateField(field));
 });
 
-form.addEventListener('submit', async (event) => {
+form?.addEventListener('submit', async (event) => {
   event.preventDefault();
   status.textContent = '';
   const valid = requiredFields.map(validateField).every(Boolean);

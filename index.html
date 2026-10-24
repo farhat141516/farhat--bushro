@@ -3,48 +3,89 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Медресе Аль Бушра — путь к знанию и нравственности." />
-    <title>Аль Бушра — медресе</title>
+    <meta name="description" content="Подача заявки на обучение в медресе Ал Бушра." />
+    <title>Ал Бушра — медресе</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <script src="/site-nav.js" defer></script>
   </head>
-  <body class="home-page">
-    <a class="skip-link" href="#welcome">Перейти к содержанию</a>
+  <body>
+    <a class="skip-link" href="apply.html">Перейти к форме заявки</a>
     <header class="hero" id="top">
       <nav class="nav container" aria-label="Основная навигация">
-        <a class="brand" href="index.html" aria-label="Аль Бушра — на главную">
+        <a class="brand" href="#top" aria-label="Ал Бушра — на главную">
           <span class="brand-mark" aria-hidden="true">أ</span>
-          <span>Аль Бушра<small>медресе</small></span>
+          <span>Ал Бушра<small>медресе</small></span>
         </a>
+        <a class="nav-link" href="about.html"><span class="nav-icon" data-icon="about" aria-hidden="true">▧</span> О медресе</a>
+        <a class="nav-link" href="teachers.html"><span class="nav-icon" data-icon="teachers" aria-hidden="true">♙</span> Устазы</a>
+        <a class="admin-badge" href="http://localhost:3001/admin/login" aria-label="Админ-панель"><span aria-hidden="true">⚙</span> Admin</a>
       </nav>
 
-      <div class="hero-page-links" aria-label="Разделы сайта">
-        <a class="nav-link" href="about.html"><span class="nav-icon-round" aria-hidden="true">☾</span> О медресе</a>
-        <a class="nav-link" href="teachers.html"><span class="nav-icon-round" aria-hidden="true">✦</span> Устазы</a>
-        <a class="nav-link" href="curriculum.html"><span class="nav-icon-round" aria-hidden="true">⌘</span> Учебный план</a>
+      <div class="hero-content container">
+        <p class="eyebrow">Путь к знанию и нравственности</p>
+        <h1>Добро пожаловать в Ал Бушра</h1>
+        <p class="hero-copy">Бережно сопровождаем учеников в изучении веры, Корана и арабского языка — в атмосфере уважения и заботы.</p>
       </div>
-
-      <main class="hero-content container" id="welcome">
-        <div class="hero-intro">
-          <p class="eyebrow">Путь к знанию и нравственности</p>
-          <h1>Место, где знания обретают <em>смысл</em></h1>
-          <p class="hero-copy">Бережно сопровождаем учеников в изучении веры, Корана и арабского языка — в атмосфере уважения и заботы.</p>
-          <a class="button hero-cta" href="apply.html">Подать заявку <span aria-hidden="true">→</span></a>
-        </div>
-      </main>
-      <div class="hero-pattern hero-pattern-one" aria-hidden="true"></div>
-      <div class="hero-pattern hero-pattern-two" aria-hidden="true"></div>
-      <div class="hero-ornament" aria-hidden="true"></div>
-      <div class="mosque-scene" aria-hidden="true">
-        <span class="moon"></span>
-        <span class="star star-one">✦</span><span class="star star-two">✦</span><span class="star star-three">✦</span>
-        <span class="minaret minaret-left"></span><span class="minaret minaret-right"></span>
-        <span class="mosque-building"></span><span class="mosque-dome"></span><span class="mosque-crescent">☾</span>
-      </div>
+      <div class="hero-pattern" aria-hidden="true"></div>
     </header>
 
+    <main>
+      <section class="photo-section container" aria-labelledby="photo-title">
+        <div class="photo-copy">
+          <p class="eyebrow">Наш дом знаний</p>
+          <h2 id="photo-title">Медресе «Ал Бушра»</h2>
+          <p>Познакомьтесь с пространством медресе и добавьте фотографии здания или учебной жизни, чтобы сохранить атмосферу нашего дома знаний.</p>
+          <a class="photo-upload button" href="/about"><span class="action-icon" aria-hidden="true">▧</span> Посмотреть фото</a>
+        </div>
+        <figure class="madrasa-photo-slot admin-visual" aria-label="Фотографии медресе">
+          <div class="madrasa-gallery" id="madrasa-gallery"></div>
+          <div class="visual-icon" aria-hidden="true">✦</div>
+          <figcaption>Познакомиться с медресе<br><small>фото здания и учебной жизни</small></figcaption>
+        </figure>
+      </section>
+
+      <section class="teachers container" id="teachers" aria-labelledby="teachers-title">
+        <div class="section-heading">
+          <p class="eyebrow">Наши наставники</p>
+          <h2 id="teachers-title">Устазы, которые ведут к знанию</h2>
+        </div>
+        <div class="teacher-grid" id="public-home-teachers"></div>
+      </section>
+
+      <section class="benefits container" id="why" aria-labelledby="why-title">
+        <div class="section-heading">
+          <p class="eyebrow">Почему Ал Бушра</p>
+          <h2 id="why-title">С вниманием к каждому шагу</h2>
+        </div>
+        <div class="benefit-grid">
+          <article class="benefit-card">
+            <span class="icon" data-icon="benefit1" aria-hidden="true">✦</span>
+            <h3>Доброжелательная среда</h3>
+            <p>Безопасное и тёплое пространство, в котором легко учиться и задавать вопросы.</p>
+          </article>
+          <article class="benefit-card">
+            <span class="icon" data-icon="benefit2" aria-hidden="true">◒</span>
+            <h3>Духовное и академическое развитие</h3>
+            <p>Соединяем глубокое понимание традиции с системным, вдумчивым обучением.</p>
+          </article>
+          <article class="benefit-card">
+            <span class="icon" data-icon="benefit3" aria-hidden="true">⌁</span>
+            <h3>Индивидуальное внимание</h3>
+            <p>Учитываем темп, возраст и образовательный маршрут каждого ученика.</p>
+          </article>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="footer container">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">أ</span><span>Ал Бушра<small>медресе</small></span></a>
+      <p>С заботой о знаниях и будущем.</p>
+    </footer>
+    <script src="public-page.js"></script>
+    <script src="app.js"></script>
+    <script src="site-nav.js"></script>
   </body>
 </html>
