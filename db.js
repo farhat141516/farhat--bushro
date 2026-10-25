@@ -77,4 +77,38 @@ async function updateApplicationStatus(id, status) {
   return result.rows[0] || null;
 }
 
-module.exports = { getPool, saveApplication, listApplications, updateApplicationStatus };
+async function getSiteContent() {
+  const database = getPool();
+  if (!database) throw new Error("Database is not configured");
+  const result = await database.query("SELECT content FROM site_content WHERE id = 1");
+  return result.rows[0]?.content || null;
+}
+
+async function saveSiteContent(content) {
+  const database = getPool();
+  if (!database) throw new Error("Database is not configured");
+  await database.query(
+    `INSERT INTO site_content (id, content, updated_at) VALUES (1, $1::jsonb, now())
+     ON CONFLICT (id) DO UPDATE SET content = EXCLUDED.content, updated_at = now()`,
+    [JSON.stringify(content)]
+  );
+}
+
+async function saveSiteMedia(filename, contentType, data) {
+  const database = getPool();
+  if (!database) throw new Error("Database is not configured");
+  await database.query(
+    `INSERT INTO site_media (filename, content_type, data) VALUES ($1, $2, $3)
+     ON CONFLICT (filename) DO UPDATE SET content_type = EXCLUDED.content_type, data = EXCLUDED.data`,
+    [filename, contentType, data]
+  );
+}
+
+async function getSiteMedia(filename) {
+  const database = getPool();
+  if (!database) throw new Error("Database is not configured");
+  const result = await database.query("SELECT content_type, data FROM site_media WHERE filename = $1", [filename]);
+  return result.rows[0] || null;
+}
+
+module.exports = { getPool, saveApplication, listApplications, updateApplicationStatus, getSiteContent, saveSiteContent, saveSiteMedia, getSiteMedia };

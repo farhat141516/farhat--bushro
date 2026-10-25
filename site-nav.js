@@ -7,7 +7,8 @@ const pages = [
   { href: 'apply.html', label: 'Подать заявку', icon: '✎', prominent: true }
 ];
 const current = location.pathname.split('/').pop() || 'index.html';
-const adminHref = new URL('/admin/login', `${location.protocol}//${location.hostname}:3001`).href;
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+const adminHref = isLocal ? new URL('/admin/login', `${location.protocol}//${location.hostname}:3001`).href : '/admin/login';
 document.querySelectorAll('header .nav').forEach((navigation) => navigation.remove());
 document.querySelectorAll('header.page-header:not(.registration-header)').forEach((header) => header.remove());
 const navigation = document.createElement('nav');

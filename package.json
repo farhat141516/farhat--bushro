@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "migrate": "node migrate.js"
+    "migrate": "node migrate.js",
+    "vercel-build": "node vercel-build.js"
   },
   "engines": { "node": ">=18" },
   "dependencies": {

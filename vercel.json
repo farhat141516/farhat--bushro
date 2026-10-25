@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "includeFiles": [
+        "*.html",
+        "*.js",
+        "*.css",
+        "*.json",
+        "*.yaml",
+        "mosque-background.png",
+        "uploads/**"
+      ]
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index?route=/$1"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
-const { getPool, saveApplication, listApplications, updateApplicationStatus } = require("./db");
+const { getPool, saveApplication, listApplications, updateApplicationStatus, getSiteContent, saveSiteContent, saveSiteMedia, getSiteMedia } = require("./db");
 
 const PORT = Number(process.env.PORT || 3000);
 const ADMIN_PORT = Number(process.env.ADMIN_PORT || 3001);
@@ -12,12 +12,12 @@ const WEBHOOK_URL = process.env.APPLICATION_WEBHOOK_URL;
 const MAX_BODY_BYTES = 12_000;
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_REQUESTS = 5;
-const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = process.env.VERCEL ? 3 * 1024 * 1024 : 8 * 1024 * 1024;
 const MAX_UPLOAD_REQUEST_BYTES = Math.ceil(MAX_UPLOAD_BYTES * 4 / 3) + 16 * 1024;
 const MAX_CONTENT_REQUEST_BYTES = 128 * 1024;
 const ADMIN_LOGIN = process.env.ADMIN_LOGIN || "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_SECRET = process.env.SESSION_SECRET || (process.env.VERCEL ? "" : crypto.randomBytes(32).toString("hex"));
 const COOKIE_SECURE = process.env.NODE_ENV === "production" ? "; Secure" : "";
 const uploadDirectory = path.join(__dirname, "uploads");
 const contentPath = path.join(uploadDirectory, "content.json");
@@ -46,6 +46,16 @@ function readContent() {
   } catch { return defaults; }
 }
 
+async function loadContent() {
+  if (process.env.VERCEL) {
+    try {
+      const content = await getSiteContent();
+      if (content) return content;
+    } catch { return readContent(); }
+  }
+  return readContent();
+}
+
 function makeSession() {
   const payload = Buffer.from(JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000 })).toString("base64url");
   const signature = crypto.createHmac("sha256", SESSION_SECRET).update(payload).digest("base64url");
@@ -53,6 +63,7 @@ function makeSession() {
 }
 
 function isAdmin(req) {
+  if (!SESSION_SECRET) return false;
   const token = (req.headers.cookie || "").split(";").map((part) => part.trim()).find((part) => part.startsWith("admin_session="))?.split("=")[1];
   if (!token) return false;
   const [payload, signature] = token.split(".");
@@ -65,6 +76,11 @@ function isAdmin(req) {
 function requireAdmin(req, res) { if (!isAdmin(req)) { send(res, 401, { message: "Требуется вход администратора." }); return false; } return true; }
 
 function readBody(req, maxBytes = MAX_BODY_BYTES) {
+  if (req.body !== undefined) {
+    const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    if (Buffer.byteLength(body) > maxBytes) return Promise.reject(new Error("body-too-large"));
+    return Promise.resolve(body);
+  }
   return new Promise((resolve, reject) => {
     let body = "";
     let tooLarge = false;
@@ -171,10 +187,23 @@ async function deliverApplication(data) {
   return applicationId;
 }
 
-function serveFile(req, res) {
+async function serveFile(req, res) {
   const pathname = new URL(req.url, "http://localhost").pathname;
   if (pathname.startsWith("/uploads/") && /^[\w.-]+$/.test(path.basename(pathname))) {
-    const filePath = path.join(uploadDirectory, path.basename(pathname));
+    const filename = path.basename(pathname);
+    if (process.env.VERCEL) {
+      try {
+        const media = await getSiteMedia(filename);
+        if (media) {
+          res.writeHead(200, { "Content-Type": media.content_type, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=3600" });
+          return res.end(media.data);
+        }
+      } catch {
+        const bundledPath = path.join(uploadDirectory, filename);
+        if (!fs.existsSync(bundledPath)) return send(res, 503, { message: "Хранилище фотографий не настроено." });
+      }
+    }
+    const filePath = path.join(uploadDirectory, filename);
     if (!fs.existsSync(filePath)) return send(res, 404, { message: "Не найдено." });
     const type = path.extname(filePath) === ".png" ? "image/png" : path.extname(filePath) === ".webp" ? "image/webp" : "image/jpeg";
     res.writeHead(200, { "Content-Type": type, "X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=3600" });
@@ -216,7 +245,10 @@ async function handleRequest(req, res, adminServer = false) {
       try { return send(res, 200, { applications: await listApplications() }); }
       catch { return send(res, 503, { message: "Не удалось получить заявки." }); }
     }
-    if (req.url === "/api/content") return send(res, 200, readContent());
+    if (req.url === "/api/content") {
+      try { return send(res, 200, await loadContent()); }
+      catch { return send(res, 503, { message: "Не удалось загрузить содержимое сайта." }); }
+    }
     const pathname = new URL(req.url, "http://localhost").pathname;
     if (!adminServer && (pathname.startsWith("/admin") || ["/admin-login.html", "/admin-login.js", "/admin.js"].includes(pathname))) return send(res, 404, { message: "Не найдено." });
     if (adminServer && pathname === "/admin" && !isAdmin(req)) {
@@ -227,6 +259,7 @@ async function handleRequest(req, res, adminServer = false) {
   }
   if (req.method === "POST" && req.url === "/api/admin/login") {
     if (!adminServer) return send(res, 404, { message: "Не найдено." });
+    if (!ADMIN_PASSWORD || !SESSION_SECRET) return send(res, 503, { message: "Вход администратора не настроен на сервере." });
     const ip = clientIp(req);
     if (isAdminLoginRateLimited(ip)) return send(res, 429, { message: "Слишком много попыток входа. Повторите через 15 минут." });
     try {
@@ -250,16 +283,20 @@ async function handleRequest(req, res, adminServer = false) {
     if (!requireAdmin(req, res)) return;
     try {
       const payload = JSON.parse(await readBody(req, MAX_CONTENT_REQUEST_BYTES));
-      const content = readContent();
+      const content = await loadContent();
       if (payload.icons && typeof payload.icons === "object") content.icons = Object.fromEntries(Object.entries({ ...content.icons, ...payload.icons }).filter(([name, value]) => /^[a-z0-9]+$/.test(name) && typeof value === "string").map(([name, value]) => [name, value.slice(0, 8)]));
       if (Array.isArray(payload.photos)) content.photos = payload.photos.filter((photo) => typeof photo === "string" && /^\/uploads\/[\w.-]+$/.test(photo)).slice(0, 6);
       if (payload.teachers && Array.isArray(payload.teachers.hafiz) && Array.isArray(payload.teachers.alim)) content.teachers = {
         hafiz: payload.teachers.hafiz.map((teacher) => ({ name: text(teacher.name, 100), subject: text(teacher.subject, 160) })).filter((teacher) => teacher.name).slice(0, 20),
         alim: payload.teachers.alim.map((teacher) => ({ name: text(teacher.name, 100), subject: text(teacher.subject, 160) })).filter((teacher) => teacher.name).slice(0, 20)
       };
-      fs.mkdirSync(uploadDirectory, { recursive: true }); fs.writeFileSync(contentPath, JSON.stringify(content, null, 2));
+      if (process.env.VERCEL) await saveSiteContent(content);
+      else { fs.mkdirSync(uploadDirectory, { recursive: true }); fs.writeFileSync(contentPath, JSON.stringify(content, null, 2)); }
       return send(res, 200, content);
-    } catch (error) { return send(res, error.message === "body-too-large" ? 413 : 400, { message: error.message === "body-too-large" ? "Запрос слишком большой." : "Не удалось сохранить контент." }); }
+    } catch (error) {
+      const status = error.message === "body-too-large" ? 413 : error.message === "Database is not configured" ? 503 : 400;
+      return send(res, status, { message: status === 413 ? "Запрос слишком большой." : status === 503 ? "Хранилище сайта не настроено." : "Не удалось сохранить контент." });
+    }
   }
   if (req.method === "POST" && req.url === "/api/admin/upload") {
     if (!adminServer) return send(res, 404, { message: "Не найдено." });
@@ -273,9 +310,17 @@ async function handleRequest(req, res, adminServer = false) {
       const extension = payload.data.match(/^data:image\/(jpeg|png|webp);/)[1].replace("jpeg", "jpg");
       if (!hasValidImageSignature(buffer, extension)) return send(res, 400, { message: "Содержимое файла не соответствует формату изображения." });
       const filename = `${crypto.randomUUID()}.${extension}`;
-      fs.mkdirSync(uploadDirectory, { recursive: true }); fs.writeFileSync(path.join(uploadDirectory, filename), buffer);
+      const contentType = extension === "jpg" ? "image/jpeg" : `image/${extension}`;
+      if (process.env.VERCEL) await saveSiteMedia(filename, contentType, buffer);
+      else { fs.mkdirSync(uploadDirectory, { recursive: true }); fs.writeFileSync(path.join(uploadDirectory, filename), buffer); }
       return send(res, 201, { path: `/uploads/${filename}` });
-    } catch (error) { return send(res, error.message === "body-too-large" ? 413 : 400, { message: error.message === "body-too-large" ? "Файл слишком большой." : "Не удалось загрузить фото." }); }
+    } catch (error) {
+      const tooLarge = error.message === "body-too-large";
+      const storageUnavailable = process.env.VERCEL && error.message !== "body-too-large";
+      const status = tooLarge ? 413 : storageUnavailable ? 503 : 400;
+      const message = tooLarge ? "Файл слишком большой." : storageUnavailable ? "Хранилище фотографий не настроено." : "Не удалось загрузить фото.";
+      return send(res, status, { message });
+    }
   }
   const statusMatch = req.method === "PATCH" ? req.url.match(/^\/api\/applications\/(\d+)$/) : null;
   if (statusMatch) {
@@ -301,7 +346,11 @@ async function handleRequest(req, res, adminServer = false) {
     }
 }
 
-const publicServer = http.createServer((req, res) => handleRequest(req, res, false));
-const adminServer = http.createServer((req, res) => handleRequest(req, res, true));
-publicServer.listen(PORT, () => console.log(`Al Bushra public site listening on http://localhost:${PORT}`));
-adminServer.listen(ADMIN_PORT, () => console.log(`Al Bushra admin panel listening on http://localhost:${ADMIN_PORT}`));
+if (require.main === module && !process.env.VERCEL) {
+  const publicServer = http.createServer((req, res) => handleRequest(req, res, false));
+  const adminServer = http.createServer((req, res) => handleRequest(req, res, true));
+  publicServer.listen(PORT, () => console.log(`Al Bushra public site listening on http://localhost:${PORT}`));
+  adminServer.listen(ADMIN_PORT, () => console.log(`Al Bushra admin panel listening on http://localhost:${ADMIN_PORT}`));
+}
+
+module.exports = { handleRequest };
