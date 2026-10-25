@@ -14,7 +14,9 @@ function originalUrl(req) {
 module.exports = async function vercelHandler(req, res) {
   req.url = originalUrl(req);
   const pathname = new URL(req.url, "https://vercel.invalid").pathname;
-  const isAdminRequest = pathname === "/admin"
+  const isAdminRequest = pathname === "/control"
+    || pathname.startsWith("/control/")
+    || pathname === "/admin"
     || pathname.startsWith("/admin/")
     || ["/admin.js", "/admin-login.html", "/admin-login.js"].includes(pathname)
     || pathname.startsWith("/api/admin/")

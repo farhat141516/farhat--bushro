@@ -34,7 +34,10 @@
           </div>
           <div class="field">
             <label for="birth-date">Дата рождения <span aria-hidden="true">*</span></label>
-            <input id="birth-date" name="birthDate" type="text" inputmode="numeric" placeholder="ГГГГ-ММ-ДД" required aria-describedby="birth-date-error" />
+            <div class="birth-date-field">
+              <input id="birth-date" name="birthDate" type="text" inputmode="none" placeholder="Выберите дату" readonly required aria-haspopup="dialog" aria-controls="birth-date-dialog" aria-describedby="birth-date-error" />
+              <button class="birth-date-trigger" id="birth-date-trigger" type="button" aria-label="Выбрать дату рождения" aria-haspopup="dialog" aria-controls="birth-date-dialog">▦</button>
+            </div>
             <p class="field-error" id="birth-date-error"></p>
           </div>
           <div class="field">
@@ -72,6 +75,18 @@
         <button class="button submit-button" type="submit">Отправить заявку <span aria-hidden="true">→</span></button>
         <p class="privacy-note">Данные передаются только защищённому серверу для рассмотрения заявки.</p>
       </form>
+      <dialog class="date-picker-dialog" id="birth-date-dialog" aria-labelledby="date-picker-title">
+        <section class="date-picker-sheet">
+          <header class="date-picker-header"><div class="date-picker-grabber" aria-hidden="true"></div><h2 id="date-picker-title">Дата рождения</h2><button class="date-picker-close" id="birth-date-cancel" type="button">Отмена</button></header>
+          <div class="date-picker-columns" aria-label="Выбор дня, месяца и года">
+            <div class="date-picker-column"><span>День</span><div class="date-wheel" id="birth-day-wheel" role="listbox" tabindex="0" aria-label="День"></div></div>
+            <div class="date-picker-column"><span>Месяц</span><div class="date-wheel" id="birth-month-wheel" role="listbox" tabindex="0" aria-label="Месяц"></div></div>
+            <div class="date-picker-column"><span>Год</span><div class="date-wheel" id="birth-year-wheel" role="listbox" tabindex="0" aria-label="Год"></div></div>
+          </div>
+          <p class="date-picker-preview" id="birth-date-preview" aria-live="polite"></p>
+          <button class="button date-picker-confirm" id="birth-date-confirm" type="button">Выбрать дату</button>
+        </section>
+      </dialog>
     </main>
     <script src="/app.js"></script>
     <script src="/site-nav.js"></script>

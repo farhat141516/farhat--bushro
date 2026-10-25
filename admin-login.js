@@ -8,5 +8,5 @@ document.querySelector('#login-form').addEventListener('submit', async (event) =
   });
   const result = await response.json();
   if (!response.ok) { status.textContent = result.message; return; }
-  location.href = '/admin';
+  location.href = '/control';
 });

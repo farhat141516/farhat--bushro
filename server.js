@@ -29,7 +29,7 @@ const publicFiles = new Map([
   ["/api/openapi.yaml", "openapi.yaml"], ["/openapi.yaml", "openapi.yaml"], ["/api/swagger.json", "swagger.json"], ["/swagger.json", "swagger.json"], ["/swagger", "swagger.html"],
   ["/swagger/", "swagger.html"], ["/about", "about.html"], ["/about.html", "about.html"], ["/teachers", "teachers.html"], ["/teachers.html", "teachers.html"], ["/apply", "apply.html"], ["/apply.html", "apply.html"],
   ["/curriculum", "curriculum.html"], ["/curriculum.html", "curriculum.html"], ["/media", "media.html"], ["/media.html", "media.html"], ["/mosque-background.png", "mosque-background.png"],
-  ["/site-nav.js", "site-nav.js"], ["/admin/login", "admin-login.html"], ["/admin-login.html", "admin-login.html"], ["/admin-login.js", "admin-login.js"], ["/admin", "admin.html"], ["/admin.js", "admin.js"], ["/public-page.js", "public-page.js"]
+  ["/site-nav.js", "site-nav.js"], ["/control/login", "admin-login.html"], ["/control", "admin.html"], ["/admin/login", "admin-login.html"], ["/admin-login.html", "admin-login.html"], ["/admin-login.js", "admin-login.js"], ["/admin", "admin.html"], ["/admin.js", "admin.js"], ["/public-page.js", "public-page.js"]
 ]);
 
 function readContent() {
@@ -152,6 +152,19 @@ function text(value, maxLength) {
   return typeof value === "string" ? value.trim().replace(/\s+/g, " ").slice(0, maxLength) : "";
 }
 
+function isValidBirthDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  if (year < 1900) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const today = new Date();
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day
+    && date.getTime() <= todayUtc;
+}
+
 function validate(payload) {
   const data = {
     studentName: text(payload.studentName, 120),
@@ -164,7 +177,7 @@ function validate(payload) {
   };
   if (text(payload.website, 100)) return { error: "Запрос отклонён." };
   if (!data.studentName || !data.guardianName || !data.phone || !data.birthDate || !data.consent) return { error: "Заполните все обязательные поля." };
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(data.birthDate) || Number.isNaN(Date.parse(`${data.birthDate}T00:00:00Z`))) return { error: "Укажите корректную дату рождения." };
+  if (!isValidBirthDate(data.birthDate)) return { error: "Укажите корректную дату рождения." };
   if (data.phone.replace(/\D/g, "").length < 7) return { error: "Укажите корректный номер телефона." };
   if (!programs.has(data.program)) return { error: "Выберите программу из списка." };
   return { data };
@@ -250,9 +263,17 @@ async function handleRequest(req, res, adminServer = false) {
       catch { return send(res, 503, { message: "Не удалось загрузить содержимое сайта." }); }
     }
     const pathname = new URL(req.url, "http://localhost").pathname;
-    if (!adminServer && (pathname.startsWith("/admin") || ["/admin-login.html", "/admin-login.js", "/admin.js"].includes(pathname))) return send(res, 404, { message: "Не найдено." });
-    if (adminServer && pathname === "/admin" && !isAdmin(req)) {
-      res.writeHead(302, { Location: "/admin/login" });
+    if (!adminServer && (pathname.startsWith("/admin") || pathname.startsWith("/control") || ["/admin-login.html", "/admin-login.js", "/admin.js"].includes(pathname))) return send(res, 404, { message: "Не найдено." });
+    if (adminServer && ["/admin", "/admin/login"].includes(pathname)) {
+      res.writeHead(302, { Location: "/control/login" });
+      return res.end();
+    }
+    if (adminServer && pathname === "/control" && !isAdmin(req)) {
+      res.writeHead(302, { Location: "/control/login" });
+      return res.end();
+    }
+    if (adminServer && pathname === "/control" && !isAdmin(req)) {
+      res.writeHead(302, { Location: "/control/login" });
       return res.end();
     }
     return serveFile(req, res);
