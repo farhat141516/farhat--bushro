@@ -1,17 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "framework": null,
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "*.html",
-        "*.js",
-        "*.css",
-        "*.json",
-        "*.yaml",
-        "mosque-background.png",
-        "uploads/**"
-      ]
+      "includeFiles": "{*.html,*.js,*.css,*.json,*.yaml,*.png,uploads/**}",
+      "excludeFiles": "{.env,.env.*,**/.env,**/.env.*}"
     }
   },
   "rewrites": [
